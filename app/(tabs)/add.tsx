@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, Image } from 'react-native';
-import { Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity,  Alert, ScrollView, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { StorageService } from '@/services/storage';
 import { Meal, MealMotivation } from '@/types/meal';
@@ -15,46 +14,196 @@ const motivationOptions: { value: MealMotivation; label: string; description: st
 ];
 
 export default function AddMealScreen() {
- 
+  const [imageUri, setImageUri] = useState<string>('');
+  const [hungerLevel, setHungerLevel] = useState<number>(5);
+  const [motivation, setMotivation] = useState<MealMotivation>('hambre');
+  const [saving, setSaving] = useState(false);
+
+
+  const getHungerDescription = (level: number) => {
+    if (level === 0) return 'Sin hambre';
+    if (level <= 2) return 'Poco hambre';
+    if (level <= 4) return 'Algo de hambre';
+    if (level <= 6) return 'Hambre moderada';
+    if (level <= 8) return 'Mucha hambre';
+    return 'Hambre extrema';
+  };
+
+  const showImagePicker = () => {
+    Alert.alert(
+      'Seleccionar Foto',
+      'Elige cómo quieres agregar una foto de tu comida',
+      [
+        { text: 'Cámara', onPress: takePhotoFromCamera },
+        { text: 'Galería', onPress: selectFromGallery },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
+
+  const takePhotoFromCamera = async () => {
+     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const selectFromGallery = async () => {
+     const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+      selectionLimit: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+   const saveMeal = async () => {
+    if (!imageUri) {
+      Alert.alert('Foto Requerida', 'Por favor agrega una foto de tu comida.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const meal: Meal = {
+        id: Date.now().toString(),
+        imageUri,
+        hungerLevel,
+        motivation,
+        timestamp: Date.now(),
+      };
+
+      await StorageService.saveMeal(meal);
+      
+      setImageUri('');
+      setHungerLevel(5);
+      setMotivation('hambre');
+      
+      Alert.alert('¡Éxito!', 'Comida guardada exitosamente', [
+        { text: 'OK', onPress: () => router.push('/list') }
+      ]);
+    } catch (error) {
+      console.error('Error saving meal:', error);
+      Alert.alert('Error', 'No se pudo guardar la comida. Inténtalo de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.title}>Registrar Comida</Text>
-          </View>
+      <View >
+        
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Foto de la Comida</Text>
+        <TouchableOpacity style={styles.photoContainer} onPress={showImagePicker}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.mealImage} />
+          ) : (
+            <View style={styles.photoPlaceholder} >
+              <Camera size={56} color="#22c55e" strokeWidth={2} />
+              <Text style={styles.photoPlaceholderText}>Toca para agregar foto</Text>
+              <Text style={styles.photoPlaceholderSubtext}>Captura o selecciona desde galería</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+       
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Nivel de Hambre: {hungerLevel}/10</Text>
+        <Text style={styles.hungerDescription}>{getHungerDescription(hungerLevel)}</Text>
+        <View style={styles.hungerContainer}>
+          {[...Array(11)].map((_, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[
+                styles.hungerButton,
+                hungerLevel === i && styles.hungerButtonActive,
+              ]}
+              onPress={() => setHungerLevel(i)}
+            >
+              <Text
+                style={[
+                  styles.hungerButtonText,
+                  hungerLevel === i && styles.hungerButtonTextActive,
+                ]}
+              >
+                {i}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      {/* Photo Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📸 Foto de la Comida</Text>
-       
-      </View>
-
-      {/* Hunger Level Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🎯 Nivel de Hambre: </Text>
-        <Text style={styles.hungerDescription}></Text>
-      
-      
-      </View>
-
       {/* Motivation Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💭 ¿Por qué comiste?</Text>
+       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>¿Por qué comiste?</Text>
         <Text style={styles.sectionSubtitle}>Identifica tu motivación principal</Text>
-       
+        {motivationOptions.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[
+              styles.motivationOption,
+              motivation === option.value && styles.motivationOptionActive,
+            ]}
+            onPress={() => setMotivation(option.value)}
+          >
+            <View style={styles.motivationContent}>
+              <View style={styles.motivationHeader}>
+                <Text style={styles.motivationEmoji}>{option.emoji}</Text>
+                <Text
+                  style={[
+                    styles.motivationLabel,
+                    motivation === option.value && styles.motivationLabelActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.motivationDescription,
+                  motivation === option.value && styles.motivationDescriptionActive,
+                ]}
+              >
+                {option.description}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.radioButton,
+                motivation === option.value && styles.radioButtonActive,
+              ]}
+            >
+              {motivation === option.value && (
+                <View style={styles.radioButtonInner} />
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
       </View>
 
-     
-
-      {/* Save Button */}
       <TouchableOpacity
-       
+        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        disabled={saving}
+        onPress={saveMeal}
       >
         <Text style={styles.saveButtonText}>
-          Guardar Comida
+          {saving ? 'Guardando...' : 'Guardar Comida'}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -74,12 +223,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
     elevation: 3,
   },
   headerContent: {
@@ -99,7 +242,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   headerIcon: {
-    backgroundColor: '#fff7ed',
+    backgroundColor: '#f0fdf4',
     padding: 12,
     borderRadius: 16,
   },
@@ -136,7 +279,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f97316',
+    borderColor: '#22c55e',
     borderStyle: 'dashed',
     borderRadius: 16,
   },
@@ -159,7 +302,7 @@ const styles = StyleSheet.create({
   hungerDescription: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#f97316',
+    color: '#22c55e',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -181,8 +324,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   hungerButtonActive: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
     transform: [{ scale: 1.1 }],
   },
   hungerButtonText: {
@@ -215,8 +358,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   motivationOptionActive: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#f97316',
+    backgroundColor: '#f0fdf4',
+    borderColor: '#22c55e',
   },
   motivationContent: {
     flex: 1,
@@ -236,7 +379,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   motivationLabelActive: {
-    color: '#f97316',
+    color: '#22c55e',
   },
   motivationDescription: {
     fontSize: 14,
@@ -244,7 +387,7 @@ const styles = StyleSheet.create({
     marginLeft: 32,
   },
   motivationDescriptionActive: {
-    color: '#ea580c',
+    color: '#4b5563',
   },
   radioButton: {
     width: 24,
@@ -257,13 +400,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioButtonActive: {
-    borderColor: '#f97316',
+    borderColor: '#22c55e',
   },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#f97316',
+    backgroundColor: '#22c55e',
   },
   notesInput: {
     borderWidth: 2,
@@ -277,13 +420,13 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#22c55e',
     marginHorizontal: 20,
     marginTop: 32,
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#f97316',
+    shadowColor: '#22c55e',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

@@ -14,10 +14,10 @@ const motivationLabels = {
 };
 
 const motivationColors = {
-  hambre: '#10b981',
+  hambre: '#16a34a',
   placer: '#3b82f6',
-  proximidad: '#f59e0b',
-  emocion: '#ef4444',
+  proximidad: '#8b5cf6',
+  emocion: '#fbbf24',
 };
 
 const motivationEmojis = {
@@ -28,7 +28,32 @@ const motivationEmojis = {
 };
 
 export function MealCard({ meal }: MealCardProps) {
-  
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getHungerDescription = (level: number) => {
+    if (level === 0) return 'Sin hambre';
+    if (level <= 2) return 'Poco hambre';
+    if (level <= 4) return 'Algo de hambre';
+    if (level <= 6) return 'Hambre moderada';
+    if (level <= 8) return 'Mucha hambre';
+    return 'Hambre extrema';
+  };
+
+  const getHungerColor = (level: number) => {
+    if (level <= 2) return '#10b981';
+    if (level <= 4) return '#22c55e';
+    if (level <= 6) return '#3b82f6';
+    if (level <= 8) return '#8b5cf6';
+    return '#ef4444';
+  };
 
   return (
     <View style={styles.card}>
@@ -36,6 +61,9 @@ export function MealCard({ meal }: MealCardProps) {
       
       <View style={styles.content}>
         <View style={styles.header}>
+          <Text style={styles.date}>
+            {formatDate(meal.timestamp)}
+          </Text>
           <View 
             style={[
               styles.motivationBadge, 
@@ -55,11 +83,24 @@ export function MealCard({ meal }: MealCardProps) {
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Nivel de Hambre</Text>
             <View style={styles.hungerContainer}>
-              <Text style={[styles.statValue]}>
-                nivel de hambre
+              <Text style={[styles.statValue, { color: getHungerColor(meal.hungerLevel) }]}>
+                {meal.hungerLevel}/10
               </Text>
-
+              <View style={styles.hungerBar}>
+                <View 
+                  style={[
+                    styles.hungerProgress, 
+                    { 
+                      width: `${(meal.hungerLevel / 10) * 100}%`,
+                      backgroundColor: getHungerColor(meal.hungerLevel)
+                    }
+                  ]} 
+                />
+              </View>
             </View>
+            <Text style={[styles.statDescription, { color: getHungerColor(meal.hungerLevel) }]}>
+              {getHungerDescription(meal.hungerLevel)}
+            </Text>
           </View>
         </View>
       </View>

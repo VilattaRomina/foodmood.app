@@ -1,20 +1,23 @@
 import { Tabs } from 'expo-router';
 import { Utensils, Plus, BarChart3 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#f97316',
+        tabBarActiveTintColor: '#22c55e',
         tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
           backgroundColor: 'white',
           borderTopWidth: 1,
           borderTopColor: '#f3f4f6',
-          paddingBottom: 8,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 8,
-          height: 65,
+          height: 65 + insets.bottom,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
@@ -28,7 +31,7 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="list"
         options={{
           title: 'Mis Comidas',
           tabBarIcon: ({ size, color }) => (
