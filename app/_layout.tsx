@@ -8,7 +8,9 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack screenOptions={{
+      <Stack 
+        initialRouteName="about"
+        screenOptions={{
           headerStyle: { backgroundColor: "white" },
           headerTintColor: "black",
         }}>
