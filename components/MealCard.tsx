@@ -14,7 +14,7 @@ const motivationLabels = {
 };
 
 const motivationColors = {
-  hambre: '#16a34a',
+  hambre: '#7c3aed',
   placer: '#3b82f6',
   proximidad: '#8b5cf6',
   emocion: '#fbbf24',
@@ -38,21 +38,22 @@ export function MealCard({ meal }: MealCardProps) {
     });
   };
 
-  const getHungerDescription = (level: number) => {
-    if (level === 0) return 'Sin hambre';
-    if (level <= 2) return 'Poco hambre';
-    if (level <= 4) return 'Algo de hambre';
-    if (level <= 6) return 'Hambre moderada';
-    if (level <= 8) return 'Mucha hambre';
-    return 'Hambre extrema';
-  };
+  const hungerLevels = [
+    { level: 1, description: 'Desmayado, mareado de hambre', emoji: '😵', category: 'Demasiado hambriento', color: '#dc2626' },
+    { level: 2, description: 'Hambre voraz', emoji: '😠', category: 'Demasiado hambriento', color: '#dc2626' },
+    { level: 3, description: 'Hambriento', emoji: '😔', category: 'Demasiado hambriento', color: '#dc2626' },
+    { level: 4, description: 'Ligeramente hambriento', emoji: '🙂', category: 'Rango ideal', color: '#10b981' },
+    { level: 5, description: 'Ni hambriento ni lleno', emoji: '😊', category: 'Rango ideal', color: '#10b981' },
+    { level: 6, description: 'Cómodamente lleno, satisfecho', emoji: '😊', category: 'Rango ideal', color: '#10b981' },
+    { level: 7, description: 'Lleno', emoji: '😊', category: 'Rango ideal', color: '#10b981' },
+    { level: 8, description: 'Incómodamente lleno', emoji: '😵', category: 'Demasiado lleno', color: '#f59e0b' },
+    { level: 9, description: 'Hinchado, muy lleno', emoji: '🤢', category: 'Demasiado lleno', color: '#f59e0b' },
+    { level: 10, description: 'Sientes náuseas', emoji: '🤮', category: 'Demasiado lleno', color: '#f59e0b' },
+  ];
 
-  const getHungerColor = (level: number) => {
-    if (level <= 2) return '#10b981';
-    if (level <= 4) return '#22c55e';
-    if (level <= 6) return '#3b82f6';
-    if (level <= 8) return '#8b5cf6';
-    return '#ef4444';
+  const getHungerInfo = (level: number) => {
+    const info = hungerLevels.find(h => h.level === level);
+    return info || { level: 5, description: 'Ni hambriento ni lleno', emoji: '😊', category: 'Rango ideal', color: '#10b981' };
   };
 
   return (
@@ -81,25 +82,33 @@ export function MealCard({ meal }: MealCardProps) {
         
         <View style={styles.stats}>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Nivel de Hambre</Text>
+            <Text style={styles.statLabel}>Nivel de Saciedad</Text>
             <View style={styles.hungerContainer}>
-              <Text style={[styles.statValue, { color: getHungerColor(meal.hungerLevel) }]}>
-                {meal.hungerLevel}/10
+              <Text style={styles.hungerEmoji}>
+                {getHungerInfo(meal.hungerLevel).emoji}
               </Text>
+              <View style={styles.statValueContainer}>
+                <Text style={[styles.statValue, { color: getHungerInfo(meal.hungerLevel).color }]}>
+                  {meal.hungerLevel}/10
+                </Text>
+                <Text style={[styles.statCategory, { color: getHungerInfo(meal.hungerLevel).color }]}>
+                  {getHungerInfo(meal.hungerLevel).category}
+                </Text>
+              </View>
               <View style={styles.hungerBar}>
                 <View 
                   style={[
                     styles.hungerProgress, 
                     { 
                       width: `${(meal.hungerLevel / 10) * 100}%`,
-                      backgroundColor: getHungerColor(meal.hungerLevel)
+                      backgroundColor: getHungerInfo(meal.hungerLevel).color
                     }
                   ]} 
                 />
               </View>
             </View>
-            <Text style={[styles.statDescription, { color: getHungerColor(meal.hungerLevel) }]}>
-              {getHungerDescription(meal.hungerLevel)}
+            <Text style={[styles.statDescription, { color: getHungerInfo(meal.hungerLevel).color }]}>
+              {getHungerInfo(meal.hungerLevel).description}
             </Text>
           </View>
         </View>
@@ -172,10 +181,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  statValueContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    minWidth: 120,
+  },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    minWidth: 50,
+  },
+  statCategory: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   hungerBar: {
     flex: 1,
@@ -192,6 +212,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 4,
+  },
+  hungerEmoji: {
+    fontSize: 24,
+    marginRight: 8,
   },
   notesContainer: {
     marginTop: 16,

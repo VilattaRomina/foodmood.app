@@ -1,27 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Trash2, Utensils } from 'lucide-react-native';
 import { Meal } from '@/types/meal';
 import { StorageService } from '@/services/storage';
 import { MealCard } from '@/components/MealCard';
-import { useFocusEffect } from '@react-navigation/native';
+import { useMealList } from '@/hooks/useMealList';
 
 export default function MealsScreen() {
-   const [meals, setMeals] = useState<Meal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadMeals = async () => {
-    try {
-      const loadedMeals = await StorageService.getAllMeals();
-      setMeals(loadedMeals.sort((a, b) => b.timestamp - a.timestamp));
-    } catch (error) {
-      console.error('Error loading meals:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const { meals, loading, refreshing, refreshMeals } = useMealList();
 
    const renderMealItem = ({ item }: { item: Meal }) => (
     <View style={styles.mealContainer}>
@@ -30,17 +16,12 @@ export default function MealsScreen() {
         style={styles.deleteButton}
         onPress={() => handleDeleteMeal(item.id)}
       >
-        <Trash2 size={18} color="#4b5563" strokeWidth={2.5} />
+        <Trash2 size={18} color="#6b7280" strokeWidth={2.5} />
       </TouchableOpacity>
     </View>
   );
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadMeals();
-  };
-
-   const handleDeleteMeal = (mealId: string) => {
+  const handleDeleteMeal = (mealId: string) => {
     Alert.alert(
       'Eliminar Comida',
       '¿Estás seguro de que quieres eliminar esta comida?',
@@ -52,28 +33,25 @@ export default function MealsScreen() {
           onPress: async () => {
             try {
               await StorageService.deleteMeal(mealId);
-              await loadMeals();
+              refreshMeals();
             } catch (error) {
               console.error('Error deleting meal:', error);
             }
           },
         },
-      ]
+      ],
+      { 
+        cancelable: true,
+        userInterfaceStyle: 'light'
+      }
     );
   };
-
-  // Cargar comidas cuando el componente se monta y cuando la pantalla se enfoca
-  useFocusEffect(
-    React.useCallback(() => {
-      loadMeals();
-    }, [])
-  );
 
   if (loading) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Cargando comidas...</Text>
+          <ActivityIndicator size="large" color="#a855f7" />
         </View>
       </View>
     );
@@ -99,9 +77,9 @@ export default function MealsScreen() {
           refreshControl={
             <RefreshControl 
               refreshing={refreshing} 
-              onRefresh={onRefresh}
-              tintColor="#22c55e"
-              colors={['#22c55e']}
+              onRefresh={refreshMeals}
+              tintColor="#8b5cf6"
+              colors={['#8b5cf6']}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -145,7 +123,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   logoContainer: {
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#f5f3ff',
     padding: 12,
     borderRadius: 16,
   },
