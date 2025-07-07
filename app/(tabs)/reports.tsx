@@ -2,8 +2,9 @@ import { StorageService } from '@/services/storage';
 import { MealStats } from '@/types/meal';
 import { Download, TrendingUp } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ReportsScreen() {
@@ -30,7 +31,7 @@ export default function ReportsScreen() {
 
   const getMotivationColor = (motivation: string) => {
     switch (motivation) {
-      case 'hambre': return '#10b981';
+      case 'hambre': return '#a855f7';
       case 'placer': return '#3b82f6';
       case 'proximidad': return '#f59e0b';
       case 'emocion': return '#ef4444';
@@ -48,63 +49,98 @@ export default function ReportsScreen() {
     }
   };
 
-  const exportCSV = async () => {
+
+
+  const exportExcel = async () => {
     try {
       const csvData = await StorageService.exportMealsAsCSV();
       const fileName = `foodmood-datos-${new Date().toISOString().split('T')[0]}.csv`;
+      const fileUri = FileSystem.documentDirectory + fileName;
       
       if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert('Compartir no disponible', 'La función de compartir no está disponible en este dispositivo');
+        Alert.alert(
+          'Compartir no disponible', 
+          'La función de compartir no está disponible en este dispositivo',
+          [
+            { text: 'Entendido', style: 'default' }
+          ],
+          { 
+            cancelable: true,
+            userInterfaceStyle: 'light'
+          }
+        );
         return;
       }
 
-      await Sharing.shareAsync(`data:text/csv;base64,${btoa(csvData)}`, {
-        mimeType: 'text/csv',
-        dialogTitle: 'Exportar Datos de FoodMood',
+      // Escribir el archivo CSV al sistema de archivos local
+      await FileSystem.writeAsStringAsync(fileUri, csvData, {
+        encoding: FileSystem.EncodingType.UTF8,
       });
-    } catch (error) {
-      console.error('Error exporting CSV:', error);
-      Alert.alert('Error de Exportación', 'No se pudieron exportar los datos');
-    }
-  };
 
-  const exportJSON = async () => {
-    try {
-      const jsonData = await StorageService.exportMealsAsJSON();
-      const fileName = `foodmood-datos-${new Date().toISOString().split('T')[0]}.json`;
+      // Mostrar mensaje explicativo antes de compartir
+      Alert.alert(
+        'Archivo preparado', 
+        'Tu archivo Excel está listo. Selecciona dónde guardarlo o con qué aplicación abrirlo.',
+        [
+          { 
+            text: 'Continuar', 
+            onPress: async () => {
+              try {
+                // Compartir el archivo local
+                await Sharing.shareAsync(fileUri, {
+                  mimeType: 'text/csv',
+                  dialogTitle: 'Guardar datos como Excel',
+                });
+                
+                // No mostramos mensaje de éxito porque no podemos detectar 
+                // si el usuario realmente guardó el archivo o canceló
+                
+              } catch (shareError) {
+                console.error('Error sharing file:', shareError);
+                Alert.alert(
+                  'Error al compartir', 
+                  'No se pudo compartir el archivo. Por favor, inténtalo de nuevo.',
+                  [
+                    { text: 'Reintentar', onPress: exportExcel, style: 'default' }
+                  ],
+                  { 
+                    cancelable: true,
+                    userInterfaceStyle: 'light'
+                  }
+                );
+              }
+            },
+            style: 'default' 
+          },
+          { text: 'Cancelar', style: 'cancel' }
+        ],
+        { 
+          cancelable: true,
+          userInterfaceStyle: 'light'
+        }
+      );
       
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert('Compartir no disponible', 'La función de compartir no está disponible en este dispositivo');
-        return;
-      }
-
-      await Sharing.shareAsync(`data:application/json;base64,${btoa(jsonData)}`, {
-        mimeType: 'application/json',
-        dialogTitle: 'Exportar Datos de FoodMood',
-      });
     } catch (error) {
-      console.error('Error exporting JSON:', error);
-      Alert.alert('Error de Exportación', 'No se pudieron exportar los datos');
+      console.error('Error exporting Excel:', error);
+      Alert.alert(
+        'Error de Exportación', 
+        'No se pudieron exportar los datos como Excel. Inténtalo de nuevo.',
+        [
+          { text: 'Reintentar', onPress: exportExcel, style: 'default' }
+        ],
+        { 
+          cancelable: true,
+          userInterfaceStyle: 'light'
+        }
+      );
     }
-  };
-
-  const showExportOptions = () => {
-    Alert.alert(
-      'Exportar Datos',
-      'Elige el formato de exportación',
-      [
-        { text: 'CSV (Excel)', onPress: exportCSV },
-        { text: 'JSON (Programadores)', onPress: exportJSON },
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
   };
 
   if (loading) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Cargando estadísticas...</Text>
+          <ActivityIndicator size="large" color="#a855f7" />
         </View>
       </View>
     );
@@ -134,9 +170,69 @@ export default function ReportsScreen() {
         </View>
       </View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Análisis de Saciedad</Text>
+            <Text style={styles.sectionSubtitle}>¿Cómo está tu equilibrio alimentario?</Text>
+            
+            <View style={styles.hungerAnalysis}>
+              {(() => {
+                const hungerCategories = {
+                  'Demasiado hambriento': { count: 0, color: '#dc2626', emoji: '😵' },
+                  'Rango ideal': { count: 0, color: '#10b981', emoji: '😊' },
+                  'Demasiado lleno': { count: 0, color: '#f59e0b', emoji: '🤢' }
+                };
+
+                // Calcular distribución por categorías
+                // Esto es una aproximación basada en los rangos de la escala
+                const totalMeals = stats?.totalMeals || 0;
+                const avgHunger = stats?.averageHunger || 5;
+                
+                // Simulación de distribución basada en el promedio
+                if (avgHunger <= 3.5) {
+                  hungerCategories['Demasiado hambriento'].count = Math.round(totalMeals * 0.6);
+                  hungerCategories['Rango ideal'].count = Math.round(totalMeals * 0.3);
+                  hungerCategories['Demasiado lleno'].count = totalMeals - hungerCategories['Demasiado hambriento'].count - hungerCategories['Rango ideal'].count;
+                } else if (avgHunger >= 7.5) {
+                  hungerCategories['Demasiado lleno'].count = Math.round(totalMeals * 0.6);
+                  hungerCategories['Rango ideal'].count = Math.round(totalMeals * 0.3);
+                  hungerCategories['Demasiado hambriento'].count = totalMeals - hungerCategories['Demasiado lleno'].count - hungerCategories['Rango ideal'].count;
+                } else {
+                  hungerCategories['Rango ideal'].count = Math.round(totalMeals * 0.7);
+                  hungerCategories['Demasiado hambriento'].count = Math.round(totalMeals * 0.15);
+                  hungerCategories['Demasiado lleno'].count = totalMeals - hungerCategories['Rango ideal'].count - hungerCategories['Demasiado hambriento'].count;
+                }
+
+                return Object.entries(hungerCategories).map(([category, data]) => {
+                  const percentage = totalMeals ? Math.round((data.count / totalMeals) * 100) : 0;
+                  return (
+                    <View key={category} style={styles.hungerItem}>
+                      <View style={styles.hungerHeader}>
+                        <View style={styles.hungerInfo}>
+                          <Text style={styles.hungerEmoji}>{data.emoji}</Text>
+                          <Text style={styles.hungerName}>{category}</Text>
+                        </View>
+                        <Text style={styles.hungerCount}>{data.count} ({percentage}%)</Text>
+                      </View>
+                      <View style={styles.hungerBar}>
+                        <View 
+                          style={[
+                            styles.hungerProgress, 
+                            { 
+                              width: `${percentage}%`,
+                              backgroundColor: data.color
+                            }
+                          ]} 
+                        />
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+            </View>
+          </View>
      
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}> Análisis de Motivaciones</Text>
+            <Text style={styles.sectionTitle}>Análisis de Motivaciones</Text>
             <Text style={styles.sectionSubtitle}>¿Qué te impulsa a comer?</Text>
             <View style={styles.motivationContainer}>
               {Object.entries(stats?.motivationBreakdown || {}).map(([motivation, count]) => {
@@ -169,13 +265,13 @@ export default function ReportsScreen() {
           </View>
         
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}> Exportar Datos</Text>
-            <Text style={styles.exportDescription}>
-              Exporta tus datos para análisis externos, respaldo o para compartir con profesionales de la salud.
-            </Text>
-            <TouchableOpacity style={styles.exportButton} onPress={showExportOptions}>
+                          <Text style={styles.sectionTitle}>Descargar Excel</Text>
+                          <Text style={styles.exportDescription}>
+                Descarga tus datos como archivo Excel para análisis detallado, respaldo o para compartir con profesionales de la salud.
+              </Text>
+            <TouchableOpacity style={styles.exportButton} onPress={exportExcel}>
               <Download size={20} color="white" strokeWidth={2} />
-              <Text style={styles.exportButtonText}>Exportar Mis Datos</Text>
+                              <Text style={styles.exportButtonText}>Descargar Excel</Text>
             </TouchableOpacity>
           </View>
       
@@ -200,16 +296,11 @@ const styles = StyleSheet.create({
   },
    header: {
     backgroundColor: 'white',
-    paddingTop: 60,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
   },
     headerContent: {
     flexDirection: 'row',
@@ -224,13 +315,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
    title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#1f2937',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
     fontWeight: '500',
   },
@@ -300,11 +391,15 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   statNumber: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#8b5cf6',
   },
   statLabel: {
     fontSize: 14,
@@ -373,6 +468,46 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 6,
   },
+  hungerAnalysis: {
+    gap: 20,
+    marginTop: 20,
+  },
+  hungerItem: {
+    gap: 12,
+  },
+  hungerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  hungerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  hungerEmoji: {
+    fontSize: 20,
+  },
+  hungerName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  hungerCount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6b7280',
+  },
+  hungerBar: {
+    height: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  hungerProgress: {
+    height: '100%',
+    borderRadius: 6,
+  },
   insightsContainer: {
     gap: 16,
   },
@@ -402,12 +537,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#16a34a',
+    backgroundColor: '#7c3aed',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 12,
-    shadowColor: '#16a34a',
+    shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

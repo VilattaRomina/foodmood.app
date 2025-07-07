@@ -2,6 +2,8 @@ import { Meal, MealStats } from "@/types/meal";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const MEALS_STORAGE_KEY = '@foodmood_meals';
 
+
+
 export class StorageService {
 
    static async saveMeal(meal: Meal): Promise<void> {
@@ -10,7 +12,6 @@ export class StorageService {
       const updatedMeals = [...existingMeals, meal];
       await AsyncStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(updatedMeals));
     } catch (error) {
-      console.error('Error saving meal:', error);
       throw error;
     }
   }
@@ -20,7 +21,6 @@ export class StorageService {
       const mealsData = await AsyncStorage.getItem(MEALS_STORAGE_KEY);
       return mealsData ? JSON.parse(mealsData) : [];
     } catch (error) {
-      console.error('Error retrieving meals:', error);
       throw error;
     }
   }
@@ -31,7 +31,6 @@ export class StorageService {
       const updatedMeals = existingMeals.filter(meal => meal.id !== mealId);
       await AsyncStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(updatedMeals));
     } catch (error) {
-      console.error('Error deleting meal:', error);
       throw error;
     }
   }
@@ -43,7 +42,7 @@ export class StorageService {
 
   static async exportMealsAsCSV(): Promise<string> {
     const meals = await this.getAllMeals();
-    const headers = 'ID,Timestamp,Fecha,Hora,Nivel_Hambre,Motivacion\n';
+    const headers = 'ID,Timestamp,Fecha,Hora,Nivel_Hambre,Motivacion,Notas\n';
     const rows = meals.map(meal => {
       const date = new Date(meal.timestamp);
       const dateStr = date.toLocaleDateString('es-ES');
@@ -54,7 +53,7 @@ export class StorageService {
         proximidad: 'Proximidad',
         emocion: 'Emoción',
       };
-      return `${meal.id},${meal.timestamp},"${dateStr}","${timeStr}",${meal.hungerLevel},"${motivationLabels[meal.motivation]}"`;
+      return `${meal.id},${meal.timestamp},"${dateStr}","${timeStr}",${meal.hungerLevel},"${motivationLabels[meal.motivation]}","${meal.notes || ''}"`;
     });
     return headers + rows.join('\n');
   }
