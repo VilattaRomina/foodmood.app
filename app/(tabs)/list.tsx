@@ -7,7 +7,7 @@ import { MealCard } from '@/components/MealCard';
 import { useMealList } from '@/hooks/useMealList';
 
 export default function MealsScreen() {
-  const { meals, loading, refreshing, refreshMeals } = useMealList();
+  const { meals, loading, refreshing, error, refreshMeals, clearData } = useMealList();
 
    const renderMealItem = ({ item }: { item: Meal }) => (
     <View style={styles.mealContainer}>
@@ -36,6 +36,7 @@ export default function MealsScreen() {
               refreshMeals();
             } catch (error) {
               console.error('Error deleting meal:', error);
+              Alert.alert('Error', 'No se pudo eliminar la comida. Inténtalo de nuevo.');
             }
           },
         },

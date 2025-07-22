@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StorageService } from '@/services/storage';
+import { MigrationService } from '@/services/migration';
 import { Meal } from '@/types/meal';
 
 let refreshListCallbacks: (() => void)[] = [];
@@ -12,12 +13,18 @@ export function useMealList() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const loadMeals = useCallback(async () => {
     try {
+      setError(null);
+      await MigrationService.checkAndMigrate();
+      
       const loadedMeals = await StorageService.getAllMeals();
       setMeals(loadedMeals.sort((a, b) => b.timestamp - a.timestamp));
     } catch (error) {
+      console.error('Error loading meals:', error);
+      setError(error instanceof Error ? error : new Error('Error desconocido'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -28,6 +35,17 @@ export function useMealList() {
     setRefreshing(true);
     loadMeals();
   }, [loadMeals]);
+
+  const clearData = useCallback(async () => {
+    try {
+      await StorageService.clearAllData();
+      setMeals([]);
+      setError(null);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      setError(error instanceof Error ? error : new Error('Error al limpiar datos'));
+    }
+  }, []);
 
   useEffect(() => {
     loadMeals();
@@ -43,7 +61,9 @@ export function useMealList() {
     meals,
     loading,
     refreshing,
+    error,
     loadMeals,
-    refreshMeals
+    refreshMeals,
+    clearData
   };
 } 
