@@ -6,6 +6,7 @@ import { useMealList } from '@/hooks/useMealList';
 import { MealCard } from '@/components/MealCard';
 import { router } from 'expo-router';
 import { StorageService } from '@/services/storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ListScreen() {
   const insets = useSafeAreaInsets();
@@ -26,24 +27,20 @@ export default function ListScreen() {
     }
   };
 
+  // Refresh meals when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshMeals();
+    }, [refreshMeals])
+  );
 
-
-  
-
-    const renderEmptyState = () => (
+      const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Utensils size={64} color="#9ca3af" />
       <Text style={styles.emptyStateTitle}>No hay comidas registradas</Text>
       <Text style={styles.emptyStateSubtitle}>
         Usa la pestaña de cámara para agregar tu primera comida
       </Text>
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => router.push('/form')}
-      >
-        <Plus size={20} color="white" />
-        <Text style={styles.addButtonText}>Agregar Comida</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -92,6 +89,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
+    paddingTop: 40,
     paddingBottom: 100,
   },
   emptyState: {

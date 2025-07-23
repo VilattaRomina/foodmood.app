@@ -48,26 +48,33 @@ export class StorageService {
         await FileSystem.deleteAsync(localUri);
       }
       
-      // Intentar mover primero (más eficiente para archivos temporales)
+      // Intentar copy primero (más confiable en producción)
       try {
-        await FileSystem.moveAsync({
+        await FileSystem.copyAsync({
           from: imageUri,
           to: localUri
         });
-        console.log('Image moved successfully to:', localUri);
-        return localUri;
-      } catch (moveError) {
-        console.log('Move failed, trying copy:', moveError);
-        // Si falla el move, intentar copy
+        console.log('Image copied successfully to:', localUri);
+        
+        // Verificar que el archivo se copió correctamente
+        const verifyInfo = await FileSystem.getInfoAsync(localUri);
+        if (verifyInfo.exists) {
+          return localUri;
+        } else {
+          throw new Error('File was not copied successfully');
+        }
+      } catch (copyError) {
+        console.log('Copy failed, trying move:', copyError);
+        // Si falla el copy, intentar move
         try {
-          await FileSystem.copyAsync({
+          await FileSystem.moveAsync({
             from: imageUri,
             to: localUri
           });
-          console.log('Image copied successfully to:', localUri);
+          console.log('Image moved successfully to:', localUri);
           return localUri;
-        } catch (copyError) {
-          console.warn('Both move and copy failed, using original URI:', copyError);
+        } catch (moveError) {
+          console.warn('Both copy and move failed, using original URI:', moveError);
           return imageUri; // Retornar la URI original si ambos fallan
         }
       }
@@ -120,41 +127,13 @@ export class StorageService {
       const documentDir = FileSystem.documentDirectory;
       
       if (documentDir) {
-        // Si la imagen ya está en el directorio de documentos, verificar si es temporal
-        if (meal.imageUri.startsWith(documentDir)) {
-          if (meal.imageUri.includes('temp_images/')) {
-            // Es una imagen temporal, moverla al directorio final
-            try {
-              const extension = meal.imageUri.split('.').pop() || 'jpg';
-              const finalUri = `${documentDir}${IMAGES_DIRECTORY}/${meal.id}.${extension}`;
-              
-              // Verificar si el archivo destino ya existe y eliminarlo
-              const destInfo = await FileSystem.getInfoAsync(finalUri);
-              if (destInfo.exists) {
-                await FileSystem.deleteAsync(finalUri);
-              }
-              
-              await FileSystem.moveAsync({
-                from: meal.imageUri,
-                to: finalUri
-              });
-              
-              optimizedImageUri = finalUri;
-              console.log('Temporary image moved to final location:', finalUri);
-            } catch (moveError) {
-              console.warn('Failed to move temporary image, using original URI:', moveError);
-              // Continuar con la URI original si falla el move
-            }
-          }
-          // Si ya está en el directorio final, usar la URI original
-        } else {
-          // La imagen no está en el directorio de documentos, intentar copiarla
-          try {
-            optimizedImageUri = await this.saveImageToLocalStorage(meal.imageUri, meal.id);
-          } catch (imageError) {
-            console.warn('Failed to copy image, using original URI:', imageError);
-            // Continuar con la URI original si falla la copia
-          }
+        // Siempre intentar copiar la imagen al directorio final, sin importar de dónde venga
+        try {
+          optimizedImageUri = await this.saveImageToLocalStorage(meal.imageUri, meal.id);
+          console.log('Image saved to final location:', optimizedImageUri);
+        } catch (imageError) {
+          console.warn('Failed to copy image, using original URI:', imageError);
+          // Continuar con la URI original si falla la copia
         }
       }
 

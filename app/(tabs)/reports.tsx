@@ -1,15 +1,18 @@
 import { StorageService } from '@/services/storage';
 import { MealStats } from '@/types/meal';
-import { Download, TrendingUp } from 'lucide-react-native';
-import React, { useState, useEffect } from 'react';
+import { Download, TrendingUp, Image } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { useFocusEffect } from '@react-navigation/native';
+import ViewShot from 'react-native-view-shot';
+import ReportImageGenerator from '@/components/ReportImageGenerator';
 
 export default function ReportsScreen() {
   const [stats, setStats] = useState<MealStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const viewShotRef = useRef<ViewShot>(null);
 
   const loadStats = async () => {
     try {
@@ -51,12 +54,13 @@ export default function ReportsScreen() {
 
 
 
-  const exportExcel = async () => {
+  const exportImage = async () => {
     try {
-      const csvData = await StorageService.exportMealsAsCSV();
-      const fileName = `foodmood-datos-${new Date().toISOString().split('T')[0]}.csv`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-      
+      if (!stats) {
+        Alert.alert('Error', 'No hay datos disponibles para generar el reporte');
+        return;
+      }
+
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert(
           'Compartir no disponible', 
@@ -72,36 +76,51 @@ export default function ReportsScreen() {
         return;
       }
 
-      // Escribir el archivo CSV al sistema de archivos local
-      await FileSystem.writeAsStringAsync(fileUri, csvData, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-
-      // Mostrar mensaje explicativo antes de compartir
+      // Mostrar mensaje de preparación
       Alert.alert(
-        'Archivo preparado', 
-        'Tu archivo Excel está listo. Selecciona dónde guardarlo o con qué aplicación abrirlo.',
+        'Generando imagen', 
+        'Estamos preparando tu reporte como imagen. Esto puede tomar unos segundos.',
         [
           { 
             text: 'Continuar', 
             onPress: async () => {
               try {
-                // Compartir el archivo local
+                // Crear una vista temporal con el componente de imagen
+                const tempView = (
+                  <View style={{ width: 400, height: 1200 }}>
+                    <ReportImageGenerator stats={stats} width={400} height={1200} />
+                  </View>
+                );
+
+                // Capturar la vista como imagen
+                const uri = await (viewShotRef.current as any).capture({
+                  format: 'png',
+                  quality: 0.9,
+                  result: 'tmpfile'
+                });
+
+                const fileName = `foodmood-reporte-${new Date().toISOString().split('T')[0]}.png`;
+                const fileUri = FileSystem.documentDirectory + fileName;
+
+                // Copiar la imagen temporal a una ubicación permanente
+                await FileSystem.copyAsync({
+                  from: uri,
+                  to: fileUri
+                });
+
+                // Compartir la imagen
                 await Sharing.shareAsync(fileUri, {
-                  mimeType: 'text/csv',
-                  dialogTitle: 'Guardar datos como Excel',
+                  mimeType: 'image/png',
+                  dialogTitle: 'Guardar reporte como imagen',
                 });
                 
-                // No mostramos mensaje de éxito porque no podemos detectar 
-                // si el usuario realmente guardó el archivo o canceló
-                
               } catch (shareError) {
-                console.error('Error sharing file:', shareError);
+                console.error('Error sharing image:', shareError);
                 Alert.alert(
                   'Error al compartir', 
-                  'No se pudo compartir el archivo. Por favor, inténtalo de nuevo.',
+                  'No se pudo compartir la imagen. Por favor, inténtalo de nuevo.',
                   [
-                    { text: 'Reintentar', onPress: exportExcel, style: 'default' }
+                    { text: 'Reintentar', onPress: exportImage, style: 'default' }
                   ],
                   { 
                     cancelable: true,
@@ -121,12 +140,12 @@ export default function ReportsScreen() {
       );
       
     } catch (error) {
-      console.error('Error exporting Excel:', error);
+      console.error('Error exporting image:', error);
       Alert.alert(
         'Error de Exportación', 
-        'No se pudieron exportar los datos como Excel. Inténtalo de nuevo.',
+        'No se pudo generar la imagen del reporte. Inténtalo de nuevo.',
         [
-          { text: 'Reintentar', onPress: exportExcel, style: 'default' }
+          { text: 'Reintentar', onPress: exportImage, style: 'default' }
         ],
         { 
           cancelable: true,
@@ -160,15 +179,23 @@ export default function ReportsScreen() {
   }
 
   return (
-     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.title}>Análisis</Text>
-            <Text style={styles.subtitle}>Últimos 30 días</Text>
+    <View style={styles.container}>
+      {/* Vista oculta para captura de imagen */}
+      <View style={{ position: 'absolute', left: -9999, top: -9999 }}>
+        <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+          {stats && <ReportImageGenerator stats={stats} width={400} height={1200} />}
+        </ViewShot>
+      </View>
+      
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.title}>Análisis</Text>
+              <Text style={styles.subtitle}>Últimos 30 días</Text>
+            </View>
           </View>
         </View>
-      </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Análisis de Saciedad</Text>
@@ -265,17 +292,18 @@ export default function ReportsScreen() {
           </View>
         
           <View style={styles.section}>
-                          <Text style={styles.sectionTitle}>Descargar Excel</Text>
-                          <Text style={styles.exportDescription}>
-                Descarga tus datos como archivo Excel para análisis detallado, respaldo o para compartir con profesionales de la salud.
-              </Text>
-            <TouchableOpacity style={styles.exportButton} onPress={exportExcel}>
-              <Download size={20} color="white" strokeWidth={2} />
-                              <Text style={styles.exportButtonText}>Descargar Excel</Text>
+            <Text style={styles.sectionTitle}>Descargar Reporte</Text>
+            <Text style={styles.exportDescription}>
+              Descarga tu reporte como imagen para compartir fácilmente en redes sociales, con amigos o para guardar como recordatorio visual de tu progreso.
+            </Text>
+            <TouchableOpacity style={styles.exportButton} onPress={exportImage}>
+              <Image size={20} color="white" strokeWidth={2} />
+              <Text style={styles.exportButtonText}>Descargar como Imagen</Text>
             </TouchableOpacity>
           </View>
       
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -296,7 +324,7 @@ const styles = StyleSheet.create({
   },
    header: {
     backgroundColor: 'white',
-    paddingTop: 20,
+    paddingTop: 40,
     paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,

@@ -31,6 +31,7 @@ const motivationEmojis = {
 
 export function MealCard({ meal, onDelete }: MealCardProps) {
   const [isDeletePressed, setIsDeletePressed] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -84,7 +85,18 @@ export function MealCard({ meal, onDelete }: MealCardProps) {
 
   return (
     <View style={styles.card}>
-      <Image source={{ uri: meal.imageUri }} style={styles.image} />
+      <Image 
+        source={{ uri: meal.imageUri }} 
+        style={styles.image}
+        onError={() => setImageError(true)}
+        onLoad={() => setImageError(false)}
+      />
+      {imageError && (
+        <View style={[styles.image, styles.imageError]}>
+          <Text style={styles.imageErrorText}>📸</Text>
+          <Text style={styles.imageErrorSubtext}>Imagen no disponible</Text>
+        </View>
+      )}
       
       <View style={styles.content}>
         <View style={styles.header}>
@@ -292,5 +304,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4b5563',
     lineHeight: 20,
+  },
+  imageError: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageErrorText: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  imageErrorSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
   },
 });

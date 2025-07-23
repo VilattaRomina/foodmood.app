@@ -11,15 +11,23 @@ import { router } from 'expo-router';
 export default function CameraScreen() {
   const insets = useSafeAreaInsets();
   const [isOpeningCamera, setIsOpeningCamera] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Abrir cámara automáticamente al ingresar
+  // Abrir cámara automáticamente al montar el componente
   useEffect(() => {
     const openCameraOnMount = async () => {
-      setIsOpeningCamera(true);
-      // Pequeño delay para asegurar que la pantalla esté lista
-      setTimeout(() => {
-        openCamera();
-      }, 500);
+      try {
+        setIsOpeningCamera(true);
+        // Pequeño delay para asegurar que la pantalla esté lista
+        setTimeout(() => {
+          openCamera();
+        }, 500);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error opening camera:', error);
+        setIsOpeningCamera(false);
+        setIsInitialized(true);
+      }
     };
     
     openCameraOnMount();
@@ -51,26 +59,33 @@ export default function CameraScreen() {
         return originalUri;
       }
 
-      // Intentar mover primero (más eficiente para archivos temporales)
+      // Intentar copy primero (más confiable en producción)
       try {
-        await FileSystem.moveAsync({
+        await FileSystem.copyAsync({
           from: originalUri,
           to: permanentUri
         });
-        console.log('Image moved successfully to permanent location:', permanentUri);
-        return permanentUri;
-      } catch (moveError) {
-        console.log('Move failed, trying copy:', moveError);
-        // Si falla el move, intentar copy
+        
+        // Verificar que el archivo se copió correctamente
+        const verifyInfo = await FileSystem.getInfoAsync(permanentUri);
+        if (verifyInfo.exists) {
+          console.log('Image copied successfully to permanent location:', permanentUri);
+          return permanentUri;
+        } else {
+          throw new Error('File was not copied successfully');
+        }
+      } catch (copyError) {
+        console.log('Copy failed, trying move:', copyError);
+        // Si falla el copy, intentar move
         try {
-          await FileSystem.copyAsync({
+          await FileSystem.moveAsync({
             from: originalUri,
             to: permanentUri
           });
-          console.log('Image copied successfully to permanent location:', permanentUri);
+          console.log('Image moved successfully to permanent location:', permanentUri);
           return permanentUri;
-        } catch (copyError) {
-          console.warn('Both move and copy failed, using original URI:', copyError);
+        } catch (moveError) {
+          console.warn('Both copy and move failed, using original URI:', moveError);
           return originalUri;
         }
       }
@@ -157,26 +172,30 @@ export default function CameraScreen() {
     }
   };
 
+  if (!isInitialized) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#8b5cf6" />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.push('/(tabs)/list')}
-        >
-          <ArrowLeft size={24} color="#6b7280" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Nueva Comida</Text>
-        <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
-        {isOpeningCamera && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#8b5cf6" />
-            <Text style={styles.loadingText}>Abriendo cámara...</Text>
-          </View>
-        )}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8b5cf6" />
+        </View>
       </View>
     </View>
   );
@@ -222,5 +241,42 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#6b7280',
+  },
+  readyContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  readyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  readySubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  cameraButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cameraButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

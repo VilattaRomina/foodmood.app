@@ -37,6 +37,9 @@ export default function RootLayout() {
               fontWeight: 'bold',
               fontSize: 18,
             },
+            headerStyle: {
+              backgroundColor: "white",
+            },
             headerLeft: () => (
               <Link href="/camera" asChild>
                 <TouchableOpacity style={{ marginLeft: 16 }}>

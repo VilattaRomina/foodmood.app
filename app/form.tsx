@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react-native';
 import { StorageService } from '@/services/storage';
 import { Meal, MealMotivation } from '@/types/meal';
 import { router, useLocalSearchParams } from 'expo-router';
+import { triggerMealListRefresh } from '@/hooks/useMealList';
 
 const motivationOptions: { value: MealMotivation; label: string; description: string; emoji: string }[] = [
   { value: 'hambre', label: 'Hambre', description: 'Tenía hambre genuina', emoji: '🍽️' },
@@ -108,6 +109,9 @@ export default function FormScreen() {
       };
 
       await StorageService.saveMeal(meal);
+      
+      // Trigger refresh of meal list
+      triggerMealListRefresh();
       
       Alert.alert('¡Éxito!', 'Comida guardada exitosamente', [
         {
@@ -329,14 +333,7 @@ export default function FormScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.push('/camera')}
-        >
-          <ArrowLeft size={24} color="#6b7280" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Nueva Comida</Text>
-        <View style={styles.placeholder} />
       </View>
 
       {renderStepIndicator()}
@@ -401,7 +398,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: 'white',
