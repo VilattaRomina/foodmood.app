@@ -1,90 +1,47 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Trash2, Utensils } from 'lucide-react-native';
-import { Meal } from '@/types/meal';
-import { StorageService } from '@/services/storage';
-import { MealCard } from '@/components/MealCard';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Utensils } from 'lucide-react-native';
 import { useMealList } from '@/hooks/useMealList';
+import { MealCard } from '@/components/MealCard';
 
-export default function MealsScreen() {
-  const { meals, loading, refreshing, error, refreshMeals, clearData } = useMealList();
+export default function ListScreen() {
+  const insets = useSafeAreaInsets();
+  const { meals, loading, refreshing, refreshMeals } = useMealList();
 
-   const renderMealItem = ({ item }: { item: Meal }) => (
-    <View style={styles.mealContainer}>
-      <MealCard meal={item} />
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteMeal(item.id)}
-      >
-        <Trash2 size={18} color="#6b7280" strokeWidth={2.5} />
-      </TouchableOpacity>
+
+
+  
+
+    const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Utensils size={64} color="#9ca3af" />
+      <Text style={styles.emptyStateTitle}>No hay comidas registradas</Text>
+      <Text style={styles.emptyStateSubtitle}>
+        Usa la pestaña de cámara para agregar tu primera comida
+      </Text>
     </View>
   );
 
-  const handleDeleteMeal = (mealId: string) => {
-    Alert.alert(
-      'Eliminar Comida',
-      '¿Estás seguro de que quieres eliminar esta comida?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await StorageService.deleteMeal(mealId);
-              refreshMeals();
-            } catch (error) {
-              console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'No se pudo eliminar la comida. Inténtalo de nuevo.');
-            }
-          },
-        },
-      ],
-      { 
-        cancelable: true,
-        userInterfaceStyle: 'light'
-      }
-    );
-  };
-
-  if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color="#a855f7" />
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8b5cf6" />
+          <Text style={styles.loadingText}>Cargando comidas...</Text>
         </View>
-      </View>
-    );
-  }
-
-  if (meals.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Aún no tienes comidas registradas</Text>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-       <FlatList
+      ) : (
+        <FlatList
           data={meals}
-          renderItem={renderMealItem}
           keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <MealCard meal={item} />}
           contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={refreshMeals}
-              tintColor="#8b5cf6"
-              colors={['#8b5cf6']}
-            />
-          }
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
+          refreshing={refreshing}
+          onRefresh={refreshMeals}
         />
+      )}
     </View>
   );
 }
@@ -92,98 +49,42 @@ export default function MealsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#f9fafb',
   },
-  header: {
-    backgroundColor: 'white',
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  subtitle: {
+  loadingText: {
+    marginTop: 16,
     fontSize: 16,
     color: '#6b7280',
-    fontWeight: '500',
   },
-  logoContainer: {
-    backgroundColor: '#f5f3ff',
-    padding: 12,
-    borderRadius: 16,
+  listContainer: {
+    padding: 16,
+    paddingBottom: 100,
   },
-  emptyContainer: {
+  emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingVertical: 40,
+    marginTop: 100,
   },
-  emptyImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 16,
-    marginBottom: 32,
-  },
-  emptyTitle: {
-    fontSize: 28,
+  emptyStateTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 12,
-    textAlign: 'center',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  emptySubtitle: {
+  emptyStateSubtitle: {
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
   },
-  emptyFeatures: {
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  featureText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  listContainer: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-   mealContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 24,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 10,
-  },
+
 });

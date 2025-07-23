@@ -9,13 +9,13 @@ export default function RootLayout() {
   return (
     <>
       <Stack 
-        initialRouteName="about"
+        initialRouteName="camera"
         screenOptions={{
           headerStyle: { backgroundColor: "white" },
           headerTintColor: "black",
         }}>
         <Stack.Screen 
-          name="about" 
+          name="camera" 
           options={{ 
             headerShown: false,
           }} 
