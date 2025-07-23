@@ -1,13 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Utensils } from 'lucide-react-native';
+import { Utensils, Plus } from 'lucide-react-native';
 import { useMealList } from '@/hooks/useMealList';
 import { MealCard } from '@/components/MealCard';
+import { router } from 'expo-router';
+import { StorageService } from '@/services/storage';
 
 export default function ListScreen() {
   const insets = useSafeAreaInsets();
   const { meals, loading, refreshing, refreshMeals } = useMealList();
+
+  const handleDeleteMeal = async (mealId: string) => {
+    try {
+      await StorageService.deleteMeal(mealId);
+      // Refrescar la lista después de eliminar
+      refreshMeals();
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo eliminar la comida. Inténtalo de nuevo.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
 
 
@@ -20,6 +37,13 @@ export default function ListScreen() {
       <Text style={styles.emptyStateSubtitle}>
         Usa la pestaña de cámara para agregar tu primera comida
       </Text>
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => router.push('/form')}
+      >
+        <Plus size={20} color="white" />
+        <Text style={styles.addButtonText}>Agregar Comida</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -34,7 +58,12 @@ export default function ListScreen() {
         <FlatList
           data={meals}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <MealCard meal={item} />}
+          renderItem={({ item }) => (
+            <MealCard 
+              meal={item} 
+              onDelete={handleDeleteMeal}
+            />
+          )}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
@@ -86,5 +115,19 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 32,
   },
-
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 24,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
 });

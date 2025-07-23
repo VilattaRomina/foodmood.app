@@ -27,22 +27,53 @@ export class StorageService {
     try {
       const documentDir = FileSystem.documentDirectory;
       if (!documentDir) {
-        throw new Error('Document directory not available');
+        console.warn('Document directory not available, using original URI');
+        return imageUri;
+      }
+      
+      // Verificar que el archivo fuente existe
+      const sourceInfo = await FileSystem.getInfoAsync(imageUri);
+      if (!sourceInfo.exists) {
+        console.warn('Source image file does not exist, using original URI:', imageUri);
+        return imageUri; // Retornar la URI original si no se puede copiar
       }
       
       const extension = imageUri.split('.').pop() || 'jpg';
       const fileName = `${mealId}.${extension}`;
       const localUri = `${documentDir}${IMAGES_DIRECTORY}/${fileName}`;
       
-      await FileSystem.copyAsync({
-        from: imageUri,
-        to: localUri
-      });
+      // Verificar si el archivo destino ya existe y eliminarlo
+      const destInfo = await FileSystem.getInfoAsync(localUri);
+      if (destInfo.exists) {
+        await FileSystem.deleteAsync(localUri);
+      }
       
-      return localUri;
+      // Intentar mover primero (más eficiente para archivos temporales)
+      try {
+        await FileSystem.moveAsync({
+          from: imageUri,
+          to: localUri
+        });
+        console.log('Image moved successfully to:', localUri);
+        return localUri;
+      } catch (moveError) {
+        console.log('Move failed, trying copy:', moveError);
+        // Si falla el move, intentar copy
+        try {
+          await FileSystem.copyAsync({
+            from: imageUri,
+            to: localUri
+          });
+          console.log('Image copied successfully to:', localUri);
+          return localUri;
+        } catch (copyError) {
+          console.warn('Both move and copy failed, using original URI:', copyError);
+          return imageUri; // Retornar la URI original si ambos fallan
+        }
+      }
     } catch (error) {
-      console.error('Error saving image to local storage:', error);
-      return imageUri;
+      console.warn('Error saving image to local storage, using original URI:', error);
+      return imageUri; // Retornar la URI original en caso de error
     }
   }
 
@@ -57,14 +88,74 @@ export class StorageService {
     }
   }
 
+  static async cleanupTempImages(): Promise<void> {
+    try {
+      const documentDir = FileSystem.documentDirectory;
+      if (!documentDir) return;
+
+      const tempDir = `${documentDir}temp_images/`;
+      const tempDirInfo = await FileSystem.getInfoAsync(tempDir);
+      
+      if (tempDirInfo.exists) {
+        const tempFiles = await FileSystem.readDirectoryAsync(tempDir);
+        for (const file of tempFiles) {
+          try {
+            await FileSystem.deleteAsync(`${tempDir}${file}`, { idempotent: true });
+          } catch (error) {
+            console.warn('Error deleting temp file:', file, error);
+          }
+        }
+        console.log('Temp images cleaned up');
+      }
+    } catch (error) {
+      console.error('Error cleaning up temp images:', error);
+    }
+  }
+
   static async saveMeal(meal: Meal): Promise<void> {
     try {
       await this.initializeStorage();
       
       let optimizedImageUri = meal.imageUri;
       const documentDir = FileSystem.documentDirectory;
-      if (documentDir && !meal.imageUri.startsWith(documentDir)) {
-        optimizedImageUri = await this.saveImageToLocalStorage(meal.imageUri, meal.id);
+      
+      if (documentDir) {
+        // Si la imagen ya está en el directorio de documentos, verificar si es temporal
+        if (meal.imageUri.startsWith(documentDir)) {
+          if (meal.imageUri.includes('temp_images/')) {
+            // Es una imagen temporal, moverla al directorio final
+            try {
+              const extension = meal.imageUri.split('.').pop() || 'jpg';
+              const finalUri = `${documentDir}${IMAGES_DIRECTORY}/${meal.id}.${extension}`;
+              
+              // Verificar si el archivo destino ya existe y eliminarlo
+              const destInfo = await FileSystem.getInfoAsync(finalUri);
+              if (destInfo.exists) {
+                await FileSystem.deleteAsync(finalUri);
+              }
+              
+              await FileSystem.moveAsync({
+                from: meal.imageUri,
+                to: finalUri
+              });
+              
+              optimizedImageUri = finalUri;
+              console.log('Temporary image moved to final location:', finalUri);
+            } catch (moveError) {
+              console.warn('Failed to move temporary image, using original URI:', moveError);
+              // Continuar con la URI original si falla el move
+            }
+          }
+          // Si ya está en el directorio final, usar la URI original
+        } else {
+          // La imagen no está en el directorio de documentos, intentar copiarla
+          try {
+            optimizedImageUri = await this.saveImageToLocalStorage(meal.imageUri, meal.id);
+          } catch (imageError) {
+            console.warn('Failed to copy image, using original URI:', imageError);
+            // Continuar con la URI original si falla la copia
+          }
+        }
       }
 
       const mealWithoutImage = {
@@ -87,6 +178,9 @@ export class StorageService {
       } else {
         await AsyncStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(updatedMeals));
       }
+
+      // Limpiar imágenes temporales después de guardar
+      await this.cleanupTempImages();
     } catch (error) {
       console.error('Error saving meal:', error);
       throw error;
@@ -171,23 +265,35 @@ export class StorageService {
 
   static async deleteMeal(mealId: string): Promise<void> {
     try {
+      // Obtener la URI de la imagen antes de eliminar la comida
       const imageKey = `${MEALS_STORAGE_KEY}_image_${mealId}`;
       const imageUri = await AsyncStorage.getItem(imageKey);
       
+      // Eliminar la imagen del almacenamiento local si existe
       if (imageUri) {
-        await this.deleteImageFromLocalStorage(imageUri);
+        try {
+          await this.deleteImageFromLocalStorage(imageUri);
+        } catch (imageError) {
+          console.warn('Error deleting image file:', imageError);
+          // Continuar con la eliminación aunque falle la eliminación de la imagen
+        }
       }
 
+      // Eliminar la referencia de la imagen
       await AsyncStorage.removeItem(imageKey);
 
+      // Obtener todas las comidas y filtrar la eliminada
       const existingMeals = await this.getAllMeals();
       const updatedMeals = existingMeals.filter(meal => meal.id !== mealId);
 
+      // Guardar la lista actualizada
       if (updatedMeals.length > 100) {
         await this.saveMealsInChunks(updatedMeals);
       } else {
         await AsyncStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(updatedMeals));
       }
+
+      console.log(`Meal ${mealId} deleted successfully`);
     } catch (error) {
       console.error('Error deleting meal:', error);
       throw error;

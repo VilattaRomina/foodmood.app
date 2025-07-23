@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Meal } from '@/types/meal';
+import { Trash2 } from 'lucide-react-native';
 
 interface MealCardProps {
   meal: Meal;
+  onDelete?: (mealId: string) => void;
 }
 
 const motivationLabels = {
@@ -27,7 +29,9 @@ const motivationEmojis = {
   emocion: '💭',
 };
 
-export function MealCard({ meal }: MealCardProps) {
+export function MealCard({ meal, onDelete }: MealCardProps) {
+  const [isDeletePressed, setIsDeletePressed] = React.useState(false);
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('es-ES', {
@@ -56,6 +60,28 @@ export function MealCard({ meal }: MealCardProps) {
     return info || { level: 5, description: 'Ni hambriento ni lleno', emoji: '😊', category: 'Rango ideal', color: '#10b981' };
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Eliminar Comida',
+      '¿Estás seguro de que quieres eliminar esta comida? Esta acción no se puede deshacer.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            if (onDelete) {
+              onDelete(meal.id);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.card}>
       <Image source={{ uri: meal.imageUri }} style={styles.image} />
@@ -65,18 +91,33 @@ export function MealCard({ meal }: MealCardProps) {
           <Text style={styles.date}>
             {formatDate(meal.timestamp)}
           </Text>
-          <View 
-            style={[
-              styles.motivationBadge, 
-              { backgroundColor: motivationColors[meal.motivation] }
-            ]}
-          >
-            <Text style={styles.motivationEmoji}>
-              {motivationEmojis[meal.motivation]}
-            </Text>
-            <Text style={styles.motivationText}>
-              {motivationLabels[meal.motivation]}
-            </Text>
+          <View style={styles.headerRight}>
+            <View 
+              style={[
+                styles.motivationBadge, 
+                { backgroundColor: motivationColors[meal.motivation] }
+              ]}
+            >
+              <Text style={styles.motivationEmoji}>
+                {motivationEmojis[meal.motivation]}
+              </Text>
+              <Text style={styles.motivationText}>
+                {motivationLabels[meal.motivation]}
+              </Text>
+            </View>
+            {onDelete && (
+              <TouchableOpacity 
+                style={[
+                  styles.deleteButton,
+                  isDeletePressed && styles.deleteButtonPressed
+                ]}
+                onPress={handleDelete}
+                onPressIn={() => setIsDeletePressed(true)}
+                onPressOut={() => setIsDeletePressed(false)}
+              >
+                <Trash2 size={16} color="#ef4444" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         
@@ -140,6 +181,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  deleteButtonPressed: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
   },
   date: {
     fontSize: 14,
