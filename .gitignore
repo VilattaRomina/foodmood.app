@@ -33,3 +33,13 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# build outputs
+android/
+ios/
+*.apk
+*.aab
+
+# generated files
+ios/build/
+android/app/build/
