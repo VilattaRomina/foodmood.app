@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Image, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react-native';
 import { StorageService } from '@/services/storage';
@@ -115,8 +115,12 @@ export default function FormScreen() {
       
       Alert.alert('¡Éxito!', 'Comida guardada exitosamente', [
         {
-          text: 'Ver Mis Comidas',
-          onPress: () => router.push('/(tabs)/list')
+          text: 'Salir de la App',
+          onPress: () => BackHandler.exitApp()
+        },
+        {
+          text: 'Guardar Otra Comida',
+          onPress: () => router.push('/camera')
         }
       ]);
     } catch (error) {

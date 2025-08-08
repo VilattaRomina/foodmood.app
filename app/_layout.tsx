@@ -13,7 +13,7 @@ function StackNavigator() {
     if (isFromShortcut) {
       const backAction = () => {
         BackHandler.exitApp();
-        return true; // Prevenir el comportamiento por defecto
+        return true; 
       };
 
       const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
