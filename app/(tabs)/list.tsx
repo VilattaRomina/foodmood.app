@@ -61,6 +61,7 @@ export default function ListScreen() {
               onDelete={handleDeleteMeal}
             />
           )}
+          ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
@@ -91,6 +92,9 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 40,
     paddingBottom: 100,
+  },
+  cardSeparator: {
+    height: 16,
   },
   emptyState: {
     flex: 1,

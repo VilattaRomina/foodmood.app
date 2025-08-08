@@ -6,6 +6,7 @@ import { StorageService } from '@/services/storage';
 import { Meal, MealMotivation } from '@/types/meal';
 import { router, useLocalSearchParams } from 'expo-router';
 import { triggerMealListRefresh } from '@/hooks/useMealList';
+import { CustomAlert } from '@/components/CustomAlert';
 
 const motivationOptions: { value: MealMotivation; label: string; description: string; emoji: string }[] = [
   { value: 'hambre', label: 'Hambre', description: 'Tenía hambre genuina', emoji: '🍽️' },
@@ -40,6 +41,7 @@ export default function FormScreen() {
   const [hasInteractedWithHunger, setHasInteractedWithHunger] = useState(false);
   const [hasInteractedWithMotivation, setHasInteractedWithMotivation] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // Obtener la imagen de los parámetros de la URL
   useEffect(() => {
@@ -113,16 +115,7 @@ export default function FormScreen() {
       // Trigger refresh of meal list
       triggerMealListRefresh();
       
-      Alert.alert('¡Éxito!', 'Comida guardada exitosamente', [
-        {
-          text: 'Salir de la App',
-          onPress: () => BackHandler.exitApp()
-        },
-        {
-          text: 'Guardar Otra Comida',
-          onPress: () => router.push('/camera')
-        }
-      ]);
+      setShowSuccessAlert(true);
     } catch (error) {
       console.error('Error saving meal:', error);
       Alert.alert('Error', 'No se pudo guardar la comida. Inténtalo de nuevo.');
@@ -390,6 +383,27 @@ export default function FormScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <CustomAlert
+        visible={showSuccessAlert}
+        title="Comida guardada"
+        message="Tu comida ha sido guardada exitosamente"
+        buttons={[
+          {
+            text: 'Salir de la App',
+            onPress: () => BackHandler.exitApp(),
+            style: 'danger',
+            icon: 'x'
+          },
+          {
+            text: 'Guardar Otra Comida',
+            onPress: () => router.push('/camera'),
+            style: 'primary',
+            icon: 'camera'
+          }
+        ]}
+        onClose={() => setShowSuccessAlert(false)}
+      />
     </View>
   );
 }
