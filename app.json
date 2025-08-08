@@ -7,9 +7,9 @@
     "icon": "./assets/images/plato-sonriente-tenedor.png",
     "scheme": "foodmood",
     "userInterfaceStyle": "automatic",
-
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rominavilatta.foodmoodapp"
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +30,6 @@
         "projectId": "04528f1e-2cb2-4252-8026-2d79a3c337d0"
       }
     },
-
     "android": {
       "package": "com.rominavilatta.foodmoodapp"
     },
