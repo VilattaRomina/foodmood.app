@@ -19,7 +19,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-quick-actions",
+        {
+          "androidIcons": {
+            "ic_shortcut_records": "./assets/images/shortcut/shortcut.png"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -31,7 +39,11 @@
       }
     },
     "android": {
-      "package": "com.rominavilatta.foodmoodapp"
+      "package": "com.rominavilatta.foodmoodapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/plato-sonriente-tenedor.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "owner": "rominavilatta"
   }
