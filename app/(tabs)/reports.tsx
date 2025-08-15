@@ -169,10 +169,8 @@ export default function ReportsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Aún no tienes reportes disponibles</Text>
-          <Text style={styles.emptySubtitle}>
-            Una vez que registres algunas comidas, aquí verás estadísticas detalladas sobre tus hábitos alimentarios.
-          </Text>
+          <TrendingUp size={64} color="#9ca3af" />
+          <Text style={styles.emptyTitle}>Aún no hay reportes disponibles</Text>
         </View>
       </View>
     );
@@ -317,7 +315,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingVertical: 40,
   },
     contentContainer: {
     paddingBottom: 40,
@@ -336,10 +333,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1f2937',
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: 'center',
   },
    title: {

@@ -16,6 +16,7 @@ function StackNavigator() {
         return true; 
       };
 
+      // si la app se abrio desde un shortcut, se cierra la app, no se puede volver atras
       const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
       return () => backHandler.remove();
     }
@@ -70,9 +71,10 @@ export default function RootLayout() {
   );
 }
 
+// inicialización de la app
 function AppContent() {
-  useFrameworkReady();
-  useQuickActions();
+  useFrameworkReady(); // hook para verificar si la app esta lista
+  useQuickActions(); // hook para verificar si la app esta lista
 
   return (
     <>

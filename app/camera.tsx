@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View,  StyleSheet,  Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Camera, ArrowLeft } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
 
-
-
 export default function CameraScreen() {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // hook para obtener el area segura de la pantalla
   const [isOpeningCamera, setIsOpeningCamera] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -33,6 +30,7 @@ export default function CameraScreen() {
     openCameraOnMount();
   }, []);
 
+  // función para copiar la imagen a una ubicación permanente
   const copyImageToPermanentLocation = async (originalUri: string): Promise<string> => {
     try {
       const documentDir = FileSystem.documentDirectory;
@@ -95,6 +93,7 @@ export default function CameraScreen() {
     }
   };
 
+  // función para abrir la cámara
   const openCamera = async () => {
     try {
       setIsOpeningCamera(true);
@@ -128,47 +127,6 @@ export default function CameraScreen() {
       console.error('Error opening camera:', error);
       Alert.alert('Error', 'No se pudo abrir la cámara');
       setIsOpeningCamera(false);
-    }
-  };
-
-  const showImagePicker = () => {
-    Alert.alert(
-      'Seleccionar Foto',
-      'Elige cómo quieres agregar una foto de tu comida',
-      [
-        { text: 'Cámara', onPress: openCamera, style: 'default' },
-        { text: 'Galería', onPress: openGallery, style: 'default' },
-        { text: 'Cancelar', style: 'cancel' },
-      ],
-      { 
-        cancelable: true,
-        userInterfaceStyle: 'light'
-      }
-    );
-  };
-
-  const openGallery = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-        selectionLimit: 1,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        // Copiar la imagen inmediatamente a una ubicación permanente
-        const permanentUri = await copyImageToPermanentLocation(result.assets[0].uri);
-        
-        // Redirigir al formulario en pasos con la imagen permanente
-        router.push({
-          pathname: '/form',
-          params: { imageUri: permanentUri }
-        });
-      }
-    } catch (error) {
-      console.error('Error opening gallery:', error);
-      Alert.alert('Error', 'No se pudo abrir la galería');
     }
   };
 

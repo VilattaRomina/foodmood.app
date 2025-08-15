@@ -3,8 +3,10 @@ import { StorageService } from '@/services/storage';
 import { MigrationService } from '@/services/migration';
 import { Meal } from '@/types/meal';
 
+//lista de callbacks para actualizar la lista de comidas
 let refreshListCallbacks: (() => void)[] = [];
 
+//se ejecuta cuando se actualiza la lista de comidas
 export const triggerMealListRefresh = () => {
   refreshListCallbacks.forEach(callback => callback());
 };

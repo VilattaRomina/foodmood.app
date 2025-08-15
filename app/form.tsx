@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { triggerMealListRefresh } from '@/hooks/useMealList';
 import { CustomAlert } from '@/components/CustomAlert';
 
+// Constantes fuera del componente para evitar recreación
 const motivationOptions: { value: MealMotivation; label: string; description: string; emoji: string }[] = [
   { value: 'hambre', label: 'Hambre', description: 'Tenía hambre genuina', emoji: '🍽️' },
   { value: 'placer', label: 'Placer', description: 'Quería disfrutar el sabor', emoji: '😋' },
@@ -28,11 +29,19 @@ const hungerLevels = [
   { level: 10, description: 'Sientes náuseas', emoji: '🤮', category: 'Demasiado lleno' },
 ];
 
+const steps: { key: FormStep; title: string; description: string }[] = [
+  { key: 'photo', title: 'Foto', description: 'Agregar foto' },
+  { key: 'hunger', title: 'Hambre', description: 'Nivel de saciedad' },
+  { key: 'motivation', title: 'Motivación', description: '¿Por qué comiste?' },
+];
+
 type FormStep = 'photo' | 'hunger' | 'motivation';
 
 export default function FormScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  
+  // Estados del formulario
   const [currentStep, setCurrentStep] = useState<FormStep>('photo');
   const [imageUri, setImageUri] = useState<string>('');
   const [hungerLevel, setHungerLevel] = useState<number>(5);
@@ -52,23 +61,16 @@ export default function FormScreen() {
     }
   }, [params.imageUri]);
 
-
-
-  const steps: { key: FormStep; title: string; description: string }[] = [
-    { key: 'photo', title: 'Foto', description: 'Agregar foto' },
-    { key: 'hunger', title: 'Hambre', description: 'Nivel de saciedad' },
-    { key: 'motivation', title: 'Motivación', description: '¿Por qué comiste?' },
-  ];
-
+  // Función para obtener la información del nivel de hambre
   const getHungerInfo = (level: number) => {
     const info = hungerLevels.find(h => h.level === level);
     return info || { level: 5, description: 'Ni hambriento ni lleno', emoji: '😊', category: 'Rango ideal' };
   };
 
+  // Validaciones de navegación
   const canGoNext = () => {
     switch (currentStep) {
       case 'photo':
-        // Permitir continuar si hay una URI de imagen, incluso si hay problemas
         return imageUri.trim() !== '';
       case 'hunger':
         return hasInteractedWithHunger;
@@ -83,6 +85,7 @@ export default function FormScreen() {
     return currentStep !== 'photo';
   };
 
+  // Navegación entre pasos
   const goToNextStep = () => {
     if (!canGoNext()) return;
 
@@ -99,6 +102,7 @@ export default function FormScreen() {
     }
   };
 
+  // Guardar la comida
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -112,9 +116,8 @@ export default function FormScreen() {
 
       await StorageService.saveMeal(meal);
       
-      // Trigger refresh of meal list
+      // Se actualiza la lista de comidas
       triggerMealListRefresh();
-      
       setShowSuccessAlert(true);
     } catch (error) {
       console.error('Error saving meal:', error);
@@ -124,6 +127,7 @@ export default function FormScreen() {
     }
   };
 
+  // Renderizado del indicador de pasos
   const renderStepIndicator = () => (
     <View style={styles.stepIndicator}>
       {steps.map((step, index) => {
@@ -161,6 +165,7 @@ export default function FormScreen() {
     </View>
   );
 
+  // Renderizado del paso de foto
   const renderPhotoStep = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepDescription}>
@@ -210,6 +215,7 @@ export default function FormScreen() {
     </View>
   );
 
+  // Renderizado del paso de hambre
   const renderHungerStep = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepDescription}>
@@ -258,6 +264,7 @@ export default function FormScreen() {
     </View>
   );
 
+  // Renderizado del paso de motivación
   const renderMotivationStep = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepDescription}>
@@ -312,8 +319,7 @@ export default function FormScreen() {
     </View>
   );
 
-
-
+  // Renderizado del paso actual
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'photo':
@@ -423,16 +429,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
-  backButton: {
-    padding: 8,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1f2937',
-  },
-  placeholder: {
-    width: 40,
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -508,27 +508,6 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 12,
     marginBottom: 16,
-  },
-  photoImagePlaceholder: {
-    width: 280,
-    height: 280,
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  photoPreviewText: {
-    fontSize: 18,
-    color: '#10b981',
-    fontWeight: 'bold',
-  },
-  photoPreviewSubtext: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-    textAlign: 'center',
   },
   photoPlaceholder: {
     backgroundColor: '#f8fafc',

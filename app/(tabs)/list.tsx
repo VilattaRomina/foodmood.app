@@ -1,17 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { Utensils } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Utensils, Plus } from 'lucide-react-native';
 import { useMealList } from '@/hooks/useMealList';
 import { MealCard } from '@/components/MealCard';
-import { router } from 'expo-router';
 import { StorageService } from '@/services/storage';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function ListScreen() {
-  const insets = useSafeAreaInsets();
-  const { meals, loading, refreshing, refreshMeals } = useMealList();
+  const insets = useSafeAreaInsets(); // hook para obtener el area segura de la pantalla
+  const { meals, loading, refreshing, refreshMeals } = useMealList(); // hook para obtener la lista de comidas
+  const hasMeals = meals && meals.length > 0; // se verifica si hay comidas
 
+  // Función para eliminar una comida
   const handleDeleteMeal = async (mealId: string) => {
     try {
       await StorageService.deleteMeal(mealId);
@@ -27,24 +28,24 @@ export default function ListScreen() {
     }
   };
 
-  // Refresh meals when screen comes into focus
+  // Se actualiza la lista de comidas cuando se entra a la pantalla
   useFocusEffect(
     React.useCallback(() => {
       refreshMeals();
     }, [refreshMeals])
   );
 
-      const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Utensils size={64} color="#9ca3af" />
-      <Text style={styles.emptyStateTitle}>No hay comidas registradas</Text>
-      <Text style={styles.emptyStateSubtitle}>
-        Usa la pestaña de cámara para agregar tu primera comida
-      </Text>
+  // Renderizado del estado vacío
+  const renderEmptyState = () => (
+    <View style={styles.container}>
+      <View style={styles.emptyState}>
+        <Utensils size={64} color="#9ca3af" />
+        <Text style={styles.emptyStateTitle}>Aún no hay comidas disponibles</Text>
+      </View>
     </View>
   );
 
-    return (
+  return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -56,13 +57,13 @@ export default function ListScreen() {
           data={meals}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <MealCard 
-              meal={item} 
+            <MealCard
+              meal={item}
               onDelete={handleDeleteMeal}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, !hasMeals && styles.listContainerEmpty]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
           refreshing={refreshing}
@@ -89,9 +90,14 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   listContainer: {
+    flexGrow: 1,
     padding: 16,
-    paddingTop: 40,
     paddingBottom: 100,
+  },
+  listContainerEmpty: {
+    paddingBottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardSeparator: {
     height: 16,
@@ -101,7 +107,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    marginTop: 100,
   },
   emptyStateTitle: {
     fontSize: 20,
@@ -109,27 +114,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginTop: 16,
     marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#8b5cf6',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginTop: 24,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    textAlign: 'center'
   },
 });

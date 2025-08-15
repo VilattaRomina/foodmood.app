@@ -4,7 +4,7 @@ import { Utensils, BarChart3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // hook para obtener el area segura de la pantalla
   
   return (
     <Tabs

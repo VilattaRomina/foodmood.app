@@ -1,3 +1,8 @@
+/**
+ * Contexto para saber si la app se abrio desde un shortcut
+
+ */
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface ShortcutContextType {
@@ -8,7 +13,7 @@ interface ShortcutContextType {
 const ShortcutContext = createContext<ShortcutContextType | undefined>(undefined);
 
 export function ShortcutProvider({ children }: { children: ReactNode }) {
-  const [isFromShortcut, setIsFromShortcut] = useState(false);
+  const [isFromShortcut, setIsFromShortcut] = useState(false); //estado inicial de la app
 
   return (
     <ShortcutContext.Provider value={{ isFromShortcut, setIsFromShortcut }}>
