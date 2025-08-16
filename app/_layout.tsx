@@ -26,7 +26,6 @@ function StackNavigator() {
 
   return (
     <Stack 
-      initialRouteName="camera"
       screenOptions={{
         headerStyle: { backgroundColor: "white" },
         headerTintColor: "black",

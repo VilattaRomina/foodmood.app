@@ -1,19 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { View,  StyleSheet,  Alert, ActivityIndicator } from 'react-native';
+import { View,  StyleSheet,  Alert, ActivityIndicator, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
+import { useShortcut } from '@/contexts/ShortcutContext';
 
 export default function CameraScreen() {
   const insets = useSafeAreaInsets(); // hook para obtener el area segura de la pantalla
   const [isOpeningCamera, setIsOpeningCamera] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { isFromShortcut } = useShortcut();
+
+  // Manejar el botón back para cerrar la app
+  useEffect(() => {
+    const backAction = () => {
+      BackHandler.exitApp();
+      return true; // Prevenir el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   // Abrir cámara automáticamente al montar el componente
   useEffect(() => {
+    console.log('📱 CameraScreen: Starting camera automatically');
+    
     const openCameraOnMount = async () => {
       try {
+        console.log('📱 Normal camera flow - opening camera automatically');
         setIsOpeningCamera(true);
         // Pequeño delay para asegurar que la pantalla esté lista
         setTimeout(() => {
@@ -121,7 +141,8 @@ export default function CameraScreen() {
         });
         setIsOpeningCamera(false);
       } else {
-        setIsOpeningCamera(false);
+        // Si se cancela la cámara, cerrar la app
+        BackHandler.exitApp();
       }
     } catch (error) {
       console.error('Error opening camera:', error);

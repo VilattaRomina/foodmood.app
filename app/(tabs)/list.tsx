@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, BackHandler } from 'react-native';
 import { Utensils } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMealList } from '@/hooks/useMealList';
@@ -11,6 +11,21 @@ export default function ListScreen() {
   const insets = useSafeAreaInsets(); // hook para obtener el area segura de la pantalla
   const { meals, loading, refreshing, refreshMeals } = useMealList(); // hook para obtener la lista de comidas
   const hasMeals = meals && meals.length > 0; // se verifica si hay comidas
+
+  // Manejar el botón back para cerrar la app
+  useEffect(() => {
+    const backAction = () => {
+      BackHandler.exitApp();
+      return true; // Prevenir el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   // Función para eliminar una comida
   const handleDeleteMeal = async (mealId: string) => {

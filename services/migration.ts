@@ -43,9 +43,13 @@ export class MigrationService {
       for (const meal of legacyMeals) {
         try {
           // Guardar la imagen localmente si es necesario
-          let optimizedImageUri = meal.imageUri;
+          let optimizedImageUri = meal.imageUri || '';
           const documentDir = FileSystem.documentDirectory;
-          if (documentDir && !meal.imageUri.startsWith(documentDir)) {
+          
+          if (!meal.imageUri) {
+            console.warn(`Comida ${meal.id} no tiene imageUri, usando string vacío`);
+            optimizedImageUri = '';
+          } else if (documentDir && !meal.imageUri.startsWith(documentDir)) {
             optimizedImageUri = await StorageService.saveImageToLocalStorage(meal.imageUri, meal.id);
           }
 

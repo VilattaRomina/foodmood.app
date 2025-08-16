@@ -6,10 +6,24 @@
     "orientation": "portrait",
     "icon": "./assets/images/plato-sonriente-tenedor.png",
     "scheme": "foodmood",
+    "intentFilters": [
+      {
+        "action": "VIEW",
+        "data": [
+          {
+            "scheme": "foodmood"
+          }
+        ],
+        "category": ["BROWSABLE", "DEFAULT"]
+      }
+    ],
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rominavilatta.foodmoodapp"
+      "bundleIdentifier": "com.rominavilatta.foodmoodapp",
+      "infoPlist": {
+        "UILaunchStoryboardName": "SplashScreen"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -24,7 +38,10 @@
         "expo-quick-actions",
         {
           "androidIcons": {
-            "ic_shortcut_records": "./assets/images/shortcut/shortcut.png"
+            "ic_shortcut_records": "./assets/images/shortcut/shortcut-small.png"
+          },
+          "iosIcons": {
+            "ic_shortcut_records": "./assets/images/shortcut/shortcut-small.png"
           }
         }
       ]

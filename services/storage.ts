@@ -1,4 +1,4 @@
-import { Meal } from "@/types/meal";
+import { Meal, MealStats, MealMotivation } from "@/types/meal";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 
@@ -294,6 +294,80 @@ export class StorageService {
     } catch (error) {
       console.error('Error clearing all data:', error);
     }
+  }
+
+  static calculateStats(meals: Meal[]): MealStats {
+    if (!meals || meals.length === 0) {
+      return {
+        totalMeals: 0,
+        mealsPerDay: 0,
+        averageHunger: 0,
+        motivationBreakdown: {
+          hambre: 0,
+          placer: 0,
+          proximidad: 0,
+          emocion: 0
+        },
+        qualityScore: 0
+      };
+    }
+
+    // Calcular estadísticas básicas
+    const totalMeals = meals.length;
+    
+    // Calcular promedio de hambre
+    const totalHunger = meals.reduce((sum, meal) => sum + meal.hungerLevel, 0);
+    const averageHunger = totalHunger / totalMeals;
+
+    // Calcular breakdown de motivaciones
+    const motivationBreakdown: Record<MealMotivation, number> = {
+      hambre: 0,
+      placer: 0,
+      proximidad: 0,
+      emocion: 0
+    };
+
+    meals.forEach(meal => {
+      if (meal.motivation in motivationBreakdown) {
+        motivationBreakdown[meal.motivation]++;
+      }
+    });
+
+    // Calcular comidas por día (basado en los últimos 30 días)
+    const now = Date.now();
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    const recentMeals = meals.filter(meal => meal.timestamp >= thirtyDaysAgo);
+    const daysWithData = Math.max(1, Math.ceil((now - Math.min(...recentMeals.map(m => m.timestamp))) / (24 * 60 * 60 * 1000)));
+    const mealsPerDay = recentMeals.length / daysWithData;
+
+    // Calcular quality score (0-100)
+    // Basado en: equilibrio de motivaciones, nivel de hambre ideal (4-7), consistencia
+    const idealHungerRange = averageHunger >= 4 && averageHunger <= 7;
+    const hungerScore = idealHungerRange ? 25 : Math.max(0, 25 - Math.abs(averageHunger - 5.5) * 5);
+    
+    // Puntuación por equilibrio de motivaciones
+    const motivationValues = Object.values(motivationBreakdown);
+    const maxMotivation = Math.max(...motivationValues);
+    const minMotivation = Math.min(...motivationValues);
+    const motivationBalance = maxMotivation > 0 ? (1 - (maxMotivation - minMotivation) / maxMotivation) : 0;
+    const motivationScore = motivationBalance * 25;
+
+    // Puntuación por hambre predominante (es mejor comer por hambre)
+    const hungerMotivationRatio = totalMeals > 0 ? motivationBreakdown.hambre / totalMeals : 0;
+    const hungerMotivationScore = hungerMotivationRatio * 25;
+
+    // Puntuación por consistencia (más comidas = más datos = mejor)
+    const consistencyScore = Math.min(25, (totalMeals / 30) * 25);
+
+    const qualityScore = Math.round(hungerScore + motivationScore + hungerMotivationScore + consistencyScore);
+
+    return {
+      totalMeals,
+      mealsPerDay: Math.round(mealsPerDay * 10) / 10, // Redondear a 1 decimal
+      averageHunger: Math.round(averageHunger * 10) / 10, // Redondear a 1 decimal
+      motivationBreakdown,
+      qualityScore: Math.max(0, Math.min(100, qualityScore)) // Asegurar que esté entre 0-100
+    };
   }
 
 }

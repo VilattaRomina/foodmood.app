@@ -11,15 +11,56 @@ export function useQuickActions() {
   const { setIsFromShortcut } = useShortcut();
 
   useEffect(() => {
-    // se escucha el evento de acciones rápidas
-    const subscription = QuickActions.addListener(({ params }) => {
-      if (params?.url) {
-        setIsFromShortcut(true); //marca que la app se abrio desde un shortcut
-        router.push(params.url as any);
+    console.log('🎯 useQuickActions: Effect started');
+    
+    // PRIMERO registrar el listener antes de setup
+    console.log('📡 Registering QuickAction listener...');
+    const subscription = QuickActions.addListener((action) => {
+      console.log('🚀🚀🚀 SHORTCUT ACTIVATED! 🚀🚀🚀');
+      console.log('Full action object:', JSON.stringify(action, null, 2));
+      console.log('Action id:', action.id);
+      console.log('Action title:', action.title);
+      console.log('Action params:', action.params);
+      
+      // Detectar CUALQUIER activación y navegar
+      console.log('🔄 NAVEGANDO AL LISTADO INMEDIATAMENTE');
+      
+      try {
+        // Navegación súper directa
+        router.replace('/(tabs)/list');
+        console.log('✅ Navegación ejecutada');
+      } catch (error) {
+        console.error('❌ Error en navegación:', error);
       }
     });
+    console.log('✅ QuickAction listener registered');
+
+    // DESPUÉS hacer el setup
+    const setupQuickActions = async () => {
+      try {
+        console.log('🔧 Setting up QuickActions...');
+        await QuickActions.setItems([
+          {
+            id: 'view_records',
+            title: 'Ver Mis Registros',
+            subtitle: 'Acceso rápido a tus comidas',
+            icon: 'ic_shortcut_records',
+            params: { 
+              target: 'list',
+              source: 'shortcut'
+            }
+          }
+        ]);
+        console.log('✅ QuickActions setup completed');
+      } catch (error) {
+        console.log('❌ Error setting up quick actions:', error);
+      }
+    };
+
+    setupQuickActions();
 
     return () => {
+      console.log('🧹 Cleaning up QuickAction listener');
       subscription?.remove();
     };
   }, [setIsFromShortcut]);

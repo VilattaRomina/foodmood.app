@@ -4,27 +4,18 @@ import * as Linking from 'expo-linking';
 import { useShortcut } from '@/contexts/ShortcutContext';
 
 export default function Index() {
-  const [initialRoute, setInitialRoute] = useState<'/camera' | '/list' | null>(null);
-  const { setIsFromShortcut } = useShortcut(); //contexto para saber si la app se abrio desde un shortcut
+  const [initialRoute, setInitialRoute] = useState<'/camera' | '/(tabs)/list' | null>(null);
 
   useEffect(() => {
-    const checkInitialURL = async () => {
-      const url = await Linking.getInitialURL(); // se obtiene la url que se abrio la app
-      
-      if (url && (url.includes('/list') || url.includes('shortcut=true'))) {
-        setIsFromShortcut(true);
-        setInitialRoute('/list');
-      } else {
-        setInitialRoute('/camera');
-      }
-    };
-
-    checkInitialURL();
-  }, [setIsFromShortcut]);
+    // Ir por defecto a cámara - comportamiento normal de la app
+    console.log('🏠 Index: Going to camera (normal app opening)');
+    setInitialRoute('/camera');
+  }, []);
 
   if (!initialRoute) {
     return null; 
   }
 
+  console.log('🏠 Index: Redirecting to:', initialRoute);
   return <Redirect href={initialRoute} />; // se redirige a la ruta inicial
 }
